@@ -24,7 +24,7 @@ from PIL import Image
 RE_ID_START = re.compile(r"^id[.:]", re.I)
 RE_STAGE = re.compile(r"stage\D*(\d+)", re.I)
 RE_DIGITS = re.compile(r"\d+")
-KEYWORDS = {"info", "guardian", "ranger", "tap to close", "close"}
+KEYWORDS = {"info", "guardian", "ranger", "tap to close", "close", "x"}
 
 
 def _level_atk(boxes, below_y: int | None) -> tuple[int | None, int | None, set[int]]:
