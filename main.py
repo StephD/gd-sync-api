@@ -28,6 +28,7 @@ scaled/cropped/padded image doesn't need new coordinates measured for it
 different resolutions, with zero per-resolution tuning needed).
 """
 import base64
+import os
 import shutil
 import tempfile
 import time
@@ -72,6 +73,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # gets saved (not just failures) so real traffic keeps building up a
 # test/calibration set instead of only capturing the ones that already broke.
 DEBUG_DIR = Path(__file__).parent / "_debug_captures"
+
+# ponytail: RENDER is set automatically by Render, absent everywhere else -
+# only downscale where the CPU is actually the bottleneck (see preprocess.downscale)
+ON_RENDER = bool(os.environ.get("RENDER"))
 
 
 def _save_debug(shot: Path, reason: str) -> None:
@@ -140,6 +145,8 @@ async def parse(request: Request):
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         f.write(data)
         shot = Path(f.name)
+    if ON_RENDER:
+        preprocess.downscale(shot)
     trimmed = None
     try:
         # Black letterboxing varies unpredictably between real captures and
