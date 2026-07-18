@@ -27,6 +27,7 @@ scaled/cropped/padded image doesn't need new coordinates measured for it
 (confirmed live across every real capture collected this session, at 3+
 different resolutions, with zero per-resolution tuning needed).
 """
+import asyncio
 import base64
 import os
 import shutil
@@ -77,6 +78,13 @@ DEBUG_DIR = Path(__file__).parent / "_debug_captures"
 # ponytail: RENDER is set automatically by Render, absent everywhere else -
 # only downscale where the CPU is actually the bottleneck (see preprocess.downscale)
 ON_RENDER = bool(os.environ.get("RENDER"))
+
+# One worker, one CPU core to work with - running requests concurrently
+# doesn't make them faster, it just means N images' worth of buffers alive
+# at once. Confirmed live: 6 simultaneous calls OOM-killed the whole
+# instance (512MB cap). Serializing costs nothing on a single-core box and
+# means a burst of calls queues instead of crashing the process.
+_parse_lock = asyncio.Lock()
 
 
 def _save_debug(shot: Path, reason: str) -> None:
@@ -142,6 +150,11 @@ async def parse(request: Request):
     t_start = time.perf_counter()
     data, type_name = await _read_image(request)
     print(f"[timing] read body: {time.perf_counter() - t_start:.2f}s, {len(data)} bytes", flush=True)
+    async with _parse_lock:
+        return await _parse_locked(data, type_name, t_start)
+
+
+async def _parse_locked(data: bytes, type_name: str | None, t_start: float):
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         f.write(data)
         shot = Path(f.name)
