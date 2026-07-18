@@ -79,6 +79,12 @@ DEBUG_DIR = Path(__file__).parent / "_debug_captures"
 # only downscale where the CPU is actually the bottleneck (see preprocess.downscale)
 ON_RENDER = bool(os.environ.get("RENDER"))
 
+# K_SERVICE is set automatically by Cloud Run, absent everywhere else.
+# Debug captures are for building a local training/calibration set - on a
+# cloud host the filesystem is ephemeral (wiped on every redeploy/restart),
+# so saving there is just a wasted write, not a real archive.
+ON_CLOUD = ON_RENDER or bool(os.environ.get("K_SERVICE"))
+
 # One worker, one CPU core to work with - running requests concurrently
 # doesn't make them faster, it just means N images' worth of buffers alive
 # at once. Confirmed live: 6 simultaneous calls OOM-killed the whole
@@ -88,6 +94,8 @@ _parse_lock = asyncio.Lock()
 
 
 def _save_debug(shot: Path, reason: str) -> None:
+    if ON_CLOUD:
+        return
     DEBUG_DIR.mkdir(exist_ok=True)
     dest = DEBUG_DIR / f"{int(time.time())}_{reason}.png"
     shutil.copy(shot, dest)
