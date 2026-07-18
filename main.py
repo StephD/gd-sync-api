@@ -55,6 +55,7 @@ st.register_type(st.ScreenType(name="leaderboard", keyword="leaderboard", parse=
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    ocr_engine.warm()
     yield
 
 

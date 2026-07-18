@@ -36,6 +36,12 @@ def _get_engine() -> RapidOCR:
     return _engine
 
 
+def warm() -> None:
+    """Force the ~4s model load now instead of on the first request - call at
+    process startup so it doesn't eat into gunicorn's worker timeout window."""
+    _get_engine()
+
+
 @dataclass(frozen=True)
 class Box:
     text: str

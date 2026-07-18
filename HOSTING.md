@@ -10,7 +10,7 @@ Linux PaaS work now.
 
 - **Root Directory:** `gd-sync-api`
 - **Build Command:** `pip install -r requirements.txt`
-- **Start Command:** `gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT`
+- **Start Command:** `gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120`
 
 Notes:
 - `main.py` (not `gd-sync-api.py`, which this project's start file used to be
