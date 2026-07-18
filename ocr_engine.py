@@ -29,10 +29,26 @@ from rapidocr import RapidOCR
 _engine: RapidOCR | None = None
 
 
+# Confirmed live: RapidOCR's default Det.limit_type "min" upscales EVERY
+# image up to a 736px minimum side before detection, even a tiny 600x260
+# crop - that's the real reason a small image took 38s on Render's CPU and
+# why requests could spike memory near the 512MB cap regardless of
+# concurrency. "max" instead caps the upper bound and never upscales small
+# images. intra/inter_op_num_threads pinned to 1 since Render's shared vCPU
+# can over-report thread count, inflating onnxruntime's per-thread buffers
+# for no real parallelism gained on a single core anyway.
+_ENGINE_PARAMS = {
+    "Det.limit_side_len": 640,
+    "Det.limit_type": "max",
+    "EngineConfig.onnxruntime.intra_op_num_threads": 1,
+    "EngineConfig.onnxruntime.inter_op_num_threads": 1,
+}
+
+
 def _get_engine() -> RapidOCR:
     global _engine
     if _engine is None:
-        _engine = RapidOCR()
+        _engine = RapidOCR(params=_ENGINE_PARAMS)
     return _engine
 
 
