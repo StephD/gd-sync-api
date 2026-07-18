@@ -116,7 +116,9 @@ def _attempt(image_path: str, type_name: str | None):
     """One detect+parse pass against a given image - never raises, so the
     caller can run this against two candidate images (trimmed vs original)
     and compare instead of committing to whichever ran first."""
+    t0 = time.perf_counter()
     boxes = ocr_engine.detect(image_path)
+    print(f"[timing] ocr_engine.detect: {time.perf_counter() - t0:.2f}s, {len(boxes)} boxes", flush=True)
     if type_name:
         screen = st.get(type_name)
         if screen is None:
@@ -132,7 +134,9 @@ def _attempt(image_path: str, type_name: str | None):
 
 @app.post("/parse")
 async def parse(request: Request):
+    t_start = time.perf_counter()
     data, type_name = await _read_image(request)
+    print(f"[timing] read body: {time.perf_counter() - t_start:.2f}s, {len(data)} bytes", flush=True)
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         f.write(data)
         shot = Path(f.name)
@@ -162,6 +166,7 @@ async def parse(request: Request):
             raise HTTPException(422, "Could not identify screen type from image")
 
         _save_debug(shot, f"{screen.name}_weak" if _is_weak(rec) else f"{screen.name}_ok")
+        print(f"[timing] total: {time.perf_counter() - t_start:.2f}s", flush=True)
         return rec
     finally:
         shot.unlink(missing_ok=True)
